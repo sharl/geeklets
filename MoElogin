@@ -1,0 +1,12 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+import urllib2
+from json import loads
+
+try:
+    for s in loads(urllib2.urlopen('http://goo.gl/5JcJQY', timeout=5).read()):
+        print "%-7s %-4s %4s %4s" % (s['name'], s['status'],
+                                     s['login'], s['login_max'])
+except Exception as e:
+    pass
