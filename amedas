@@ -1,18 +1,51 @@
 #!/bin/bash
 
+args=$(/usr/bin/getopt HV $*)
+if [ $? != 0 ]; then
+    echo Usage: $(basename $0) [-HV] [spot code]
+    echo
+    echo "-H     show in horizontal"
+    echo "-V     show in vertical   (default)"
+    echo
+    echo spot code
+    echo
+    echo open http://www.jma.go.jp/jp/amedas/ and select city or town name.
+    echo
+    echo URI http://www.jma.go.jp/jp/amedas_h/today-XXXXX.html
+    echo
+    echo "XXXXX is spot code. default is 44132. (Tokyo)"
+    echo
+    exit 2
+fi
+
+set -- $args
+
+dir=v
+for o in $args; do
+    case "$o" in
+        -H)
+	    dir=h
+            shift;;
+        -V)
+	    dir=v
+            shift;;
+        --)
+            shift; break;;
+    esac
+done
+
 R=${1-44132}
 T=http://www.jma.go.jp/jp/amedas_h/today-$R.html
 #Y=http://www.jma.go.jp/jp/amedas_h/yesterday-$R.html
 
-/usr/bin/curl -s $T | /usr/bin/awk '
+function get {
+    /usr/bin/curl -s $1 | /usr/bin/awk '
     function trim(s) {
 	gsub(/<[^>]+>/, "_", s);
 	gsub(/__/, " ", s);
 	gsub("_", "", s);
 	gsub(/^[ \t]+/, "", s);
 	return s
-    }
-    BEGIN {
     }
     /class="td_title height2"/{
 	split(trim($0), ltmp, "　")
@@ -32,12 +65,16 @@ T=http://www.jma.go.jp/jp/amedas_h/today-$R.html
     END {
 	print location, t"時"
 
-	for (i = 1; i < length(label); i++) {
-	    if (i == 3) {
-		print substr(label[i], 0, 6), value[i]
-	    } else {
-		print substr(label[i], 0, 6), value[i], unit[i]
-	    }
+	for (i = 1; i <= length(label); i++) {
+	    if (i == 3)	unit[i]=""
+	    print substr(label[i], 0, 6), value[i]unit[i]
 	}
     }
 '
+}
+
+if [ $dir = "v" ]; then
+    get $T
+elif [ $dir = "h" ]; then
+    echo $(get $T)
+fi
