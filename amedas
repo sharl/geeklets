@@ -2,7 +2,7 @@
 
 args=$(/usr/bin/getopt HV $*)
 if [ $? != 0 ]; then
-    echo Usage: $(basename $0) [-HV] [spot code]
+    echo Usage: $(basename $0) [-HV] [spot code, ...]
     echo
     echo "-H     show in horizontal"
     echo "-V     show in vertical   (default)"
@@ -33,10 +33,6 @@ for o in $args; do
             shift; break;;
     esac
 done
-
-R=${1-44132}
-T=http://www.jma.go.jp/jp/amedas_h/today-$R.html
-#Y=http://www.jma.go.jp/jp/amedas_h/yesterday-$R.html
 
 function get {
     /usr/bin/curl -s $1 | /usr/bin/awk '
@@ -73,8 +69,21 @@ function get {
 '
 }
 
-if [ $dir = "v" ]; then
-    get $T
-elif [ $dir = "h" ]; then
-    echo $(get $T)
+function show {
+    if [ $dir = "v" ]; then
+	get $1
+	echo
+    elif [ $dir = "h" ]; then
+	echo $(get $1)
+    fi
+}
+
+if [ $# -lt 2 ]; then
+    show http://www.jma.go.jp/jp/amedas_h/today-${1-44132}.html
+else
+    for code in $*; do
+	show http://www.jma.go.jp/jp/amedas_h/today-${code}.html
+    done
 fi
+
+#Y=http://www.jma.go.jp/jp/amedas_h/yesterday-$R.html
