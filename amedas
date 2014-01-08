@@ -1,0 +1,43 @@
+#!/bin/bash
+
+R=${1-44132}
+T=http://www.jma.go.jp/jp/amedas_h/today-$R.html
+#Y=http://www.jma.go.jp/jp/amedas_h/yesterday-$R.html
+
+/usr/bin/curl -s $T | /usr/bin/awk '
+    function trim(s) {
+	gsub(/<[^>]+>/, "_", s);
+	gsub(/__/, " ", s);
+	gsub("_", "", s);
+	gsub(/^[ \t]+/, "", s);
+	return s
+    }
+    BEGIN {
+    }
+    /class="td_title height2"/{
+	split(trim($0), ltmp, "　")
+	gsub(/\(.*\)/, "", ltmp[2])
+	location = ltmp[2]
+    }
+    /class="block top bgcolor"/{
+	split(trim($0), label, " ")
+    }
+    /class="block middle bgcolor"/{
+	split(trim($0), unit, " ")
+    }
+    /class="block middle">[0-9\.-]+/{
+	t++;
+	split(trim($0), value, " ")
+    }
+    END {
+	print location, t"時"
+
+	for (i = 1; i < length(label); i++) {
+	    if (i == 3) {
+		print substr(label[i], 0, 6), value[i]
+	    } else {
+		print substr(label[i], 0, 6), value[i], unit[i]
+	    }
+	}
+    }
+'
