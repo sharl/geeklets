@@ -1,6 +1,6 @@
 #!/bin/bash
 
-args=$(/usr/bin/getopt eHV $*)
+args=$(/usr/bin/getopt ejHV $*)
 if [ $? != 0 ]; then
     echo Usage: $(basename $0) [-ejHV] [spot code, ...]
     echo
