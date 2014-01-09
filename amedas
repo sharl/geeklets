@@ -82,6 +82,7 @@ function get {
 
 	for (i = 1; i <= length(label); i++) {
 	    if (i == 3)	unit[i]=""
+	    if (value[i] ~ /nbsp/) continue
 	    print substr(label[i], 0, cut), value[i]unit[i]
 	}
     }
