@@ -55,10 +55,10 @@ function get {
     /class="td_title height2"/{
 	if (lng == "jp") {
 	    split(trim($0), ltmp, "　")
-	    gsub(/\(.*\)/, "", ltmp[2])
+	    sub(/\(.*\)/, "", ltmp[2])
 	    location = ltmp[2]
 	} else {
-	    gsub(/^.*;/, "")
+	    sub(/^.*;/, "")
 	    location =  trim($0)
 	}
     }
@@ -67,8 +67,8 @@ function get {
     }
     /class="block middle bgcolor"/{
 	if (lng == "en") {
-	    gsub("In 16", "", $0)
-	    gsub("&deg;C", "℃", $0)
+	    sub("In 16", "")
+	    sub("&deg;C", "℃")
 	}
 	split(trim($0), unit, " ")
     }
@@ -105,5 +105,3 @@ else
 	show http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
     done
 fi
-
-#Y=http://www.jma.go.jp/jp/amedas_h/yesterday-$R.html
