@@ -77,13 +77,15 @@ function get {
 	split(trim($0), value, " ")
     }
     END {
-	print location, t":"
-	cut = (lng == "jp") ? 6 : 4
+	if (t) {
+	    print location, t":"
+	    cut = (lng == "jp") ? 6 : 4
 
-	for (i = 1; i <= length(label); i++) {
-	    if (i == 3)	unit[i]=""
-	    if (value[i] ~ /nbsp/) continue
-	    print substr(label[i], 0, cut), value[i]unit[i]
+	    for (i = 1; i <= length(label); i++) {
+		if (i == 3)	unit[i]=""
+		if (value[i] ~ /nbsp/) continue
+		print substr(label[i], 0, cut), value[i]unit[i]
+	    }
 	}
     }
 '
