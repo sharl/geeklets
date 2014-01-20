@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LC_ALL=C
+
 args=$(/usr/bin/getopt ejHV $*)
 if [ $? != 0 ]; then
     echo Usage: $(basename $0) [-ejHV] [spot code, ...]
