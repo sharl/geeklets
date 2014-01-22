@@ -102,10 +102,9 @@ function show {
     fi
 }
 
-if [ $# -lt 2 ]; then
-    show http://www.jma.go.jp/$lng/amedas_h/today-${1-44132}.html
-else
-    for code in $*; do
+deflist=${AMEDAS-44132}	# Tokyo
+list=${*-$deflist}
+
+for code in $list; do
 	show http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
-    done
-fi
+done
