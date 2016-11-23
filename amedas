@@ -73,9 +73,6 @@ function get {
     code=$1
     region=$2
     u=http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
-    if [ "$(date +%H)" = "00" ]; then
-	u=http://www.jma.go.jp/$lng/amedas_h/yesterday-${code}.html
-    fi
 
     /usr/bin/curl -s $u | /usr/bin/gawk -v lng=$lng -v code=$code -v region=$region '
     function trim(s) {
