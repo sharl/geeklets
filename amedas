@@ -1,15 +1,35 @@
 #!/bin/bash
-
+#
 export LC_ALL=C
+PROG=$(basename $0)
+#
+codes=~/.${PROG}
+#
+# codes format:
+#
+#	spotname code [region]
+#
+# 札幌 14163
+# 東京 44132
+# 清水 50261 静岡
+# 清水 65121 和歌山
+# 清水 74516 高知
+#
+# from
+#	http://www.jma.go.jp/jma/kishou/know/amedas/kaisetsu.html
+#	http://www.jma.go.jp/jma/kishou/know/amedas/ame_master.zip
+# or
+#	https://gist.github.com/sharl/7fe81af4ebc53791732314392201c8a9
+#
 
 args=$(/usr/bin/getopt ejHV $*)
 if [ $? != 0 ]; then
-    echo Usage: $(basename $0) [-ejHV] [spot code, ...]
+    echo Usage: ${PROG} [-ejHV] [spot code or name, ...]
     echo
     echo "-e     show in English"
-    echo "-j     show in Japanese (default)"
-    echo "-H     show in horizontal"
-    echo "-V     show in vertical   (default)"
+    echo "-j     show in Japanese   (default)"
+    echo "-V     show in vertical"
+    echo "-H     show in horizontal (default)"
     echo
     echo spot code
     echo
@@ -19,13 +39,17 @@ if [ $? != 0 ]; then
     echo
     echo "XXXXX is spot code. default is 44132. (Tokyo)"
     echo
+    echo set AMEDAS default spots.
+    echo
+    echo -e 'ex)\texport AMEDAS="14163 44132 46106"'
+    echo
     exit 2
 fi
 
 set -- $args
 
 lng=jp
-dir=v
+dir=h
 for o in $args; do
     case "$o" in
 	-e)
@@ -46,7 +70,14 @@ for o in $args; do
 done
 
 function get {
-    /usr/bin/curl -s $1 | /usr/bin/awk -v lng=$lng '
+    code=$1
+    region=$2
+    u=http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
+    if [ "$(date +%H)" = "00" ]; then
+	u=http://www.jma.go.jp/$lng/amedas_h/yesterday-${code}.html
+    fi
+
+    /usr/bin/curl -s $u | /usr/bin/gawk -v lng=$lng -v code=$code -v region=$region '
     function trim(s) {
 	gsub(/<[^>]+>/, "_", s);
 	gsub(/__/, " ", s);
@@ -61,7 +92,7 @@ function get {
 	    location = ltmp[2]
 	} else {
 	    sub(/^.*;/, "")
-	    location =  trim($0)
+	    location = trim($0)
 	}
     }
     /class="block top bgcolor/{
@@ -78,33 +109,85 @@ function get {
 	t++;
 	split(trim($0), value, " ")
     }
+    /td_low/{
+	split(trim($0), tt, "_")
+        gsub("\\(.*\\)", "", tt[1])
+        gsub("&nbsp;", "", tt[1])
+        ac[ai] = tt[1]
+    }
+    /td_arrange/{
+	split(trim($0), tt, " ")
+        gsub("&nbsp;", "", tt[1])
+        gsub("\\(.*\\)", "", tt[1])
+        av[ai] = tt[1]
+    }
+    /td_temp/{
+	split(trim($0), tt, " ")
+        at[ai] = tt[1]
+        ai++;
+    }
     END {
-	if (t) {
-	    print location, t":"
+	if (location && t) {
+            if (region) {
+	        print location"("region")", t":"
+            } else {
+	        print location, t":"
+            }
 	    cut = (lng == "jp") ? 6 : 4
 
 	    for (i = 1; i <= length(label); i++) {
-		if (i == 3)	unit[i]=""
+		if (label[i] == "風向" || label[i] ~ /Direction/) unit[i]=""
 		if (value[i] ~ /nbsp/) continue
 		print substr(label[i], 0, cut), value[i]unit[i]
 	    }
+            u[1]=unit[1]
+            u[2]=unit[1]
+            u[3]=unit[4]
+	    for (i = 1; i < length(ac); i++) {
+                print ac[i], av[i]u[i], "("at[i]")"
+            }
 	}
     }
 '
 }
 
 function show {
+    code=$1
+    region=$2
     if [ $dir = "v" ]; then
-	get $1
+	get ${code} ${region}
 	echo
     elif [ $dir = "h" ]; then
-	echo $(get $1)
+	l=$(get ${code} ${region})
+	if [ -z "$l" ]; then
+	    return 1
+	else
+	    echo $l
+	fi
     fi
 }
 
 deflist=${AMEDAS-44132}	# Tokyo
 list=${*-$deflist}
 
+tf=$(/bin/mktemp)
+trap "/bin/rm -f $tf" 0 1 2 3 15
+
 for code in $list; do
-	show http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
+    if [ -f $codes ]; then
+	grep "^$code " $codes > $tf
+	if [ -s $tf ]; then
+	    cat $tf | while read spot cod region; do
+		show ${cod} ${region}
+	    done
+	else
+	    show ${code}
+	fi
+    else
+	show ${code}
+    fi
+    RET=$?
+    if [ $RET -eq 1 ]; then
+	echo "$code が見つかりませんでした。http://www.jma.go.jp/jp/amedas/ から観測地点を指定してください。"
+    fi
 done
