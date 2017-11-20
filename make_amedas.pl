@@ -44,8 +44,8 @@ foreach my $code (sort keys %maps) {
     my $point = $maps{$code};
 
     if ($dups{$point} > 1) {
-        print "$maps{$code} $code $prefs{$code}\n";
+        print "$point $code $prefs{$code}\n";
     } else {
-        print "$maps{$code} $code\n";
+        print "$point $code\n";
     }
 }
