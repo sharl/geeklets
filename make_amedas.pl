@@ -43,9 +43,16 @@ close($fd);
 foreach my $code (sort keys %maps) {
     my $point = $maps{$code};
 
+    my $kpoint = $point;
+    utf8::decode($kpoint);
+    $kpoint =~ s/ケ/ヶ/g if $kpoint =~ /ケ/;
+    utf8::encode($kpoint);
+
     if ($dups{$point} > 1) {
         print "$point $code $prefs{$code}\n";
+	print "$kpoint $code $prefs{$code}\n" if $kpoint ne $point;
     } else {
         print "$point $code\n";
+	print "$kpoint $code\n" if $kpoint ne $point;
     }
 }
