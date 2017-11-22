@@ -40,19 +40,54 @@ while (my $line = <$fd>) {
 }
 close($fd);
 
+my %table = (
+    'ケ' => 'ヶ',
+    '鰺' => '鯵',
+);
+
+sub _trans {
+    my $point = shift;
+    my @results = ();
+
+    utf8::decode($point);
+
+    foreach my $p (keys %table) {
+        if ($point =~ /$p/) {
+            my $tmp = $point;
+
+            $tmp =~ s/$p/$table{$p}/;
+            utf8::encode($tmp);
+            push @results, $tmp;
+        }
+    }
+    @results;
+}
+
+sub trans {
+    my $word = shift;
+
+    my @results = ($word);
+    my @r = _trans($word);
+    for my $r (@r) {
+        push @results, $r;
+        my @_r = _trans($r);
+        push @results, @_r;
+    }
+    my %hash;
+    map {$hash{$_}++ unless $hash{$_}} @results;
+    sort keys %hash;
+}
+
 foreach my $code (sort keys %maps) {
     my $point = $maps{$code};
 
-    my $kpoint = $point;
-    utf8::decode($kpoint);
-    $kpoint =~ s/ケ/ヶ/g if $kpoint =~ /ケ/;
-    utf8::encode($kpoint);
-
     if ($dups{$point} > 1) {
-        print "$point $code $prefs{$code}\n";
-	print "$kpoint $code $prefs{$code}\n" if $kpoint ne $point;
+        foreach my $kpoint (trans($point)) {
+            print "$kpoint $code $prefs{$code}\n";
+        }
     } else {
-        print "$point $code\n";
-	print "$kpoint $code\n" if $kpoint ne $point;
+        foreach my $kpoint (trans($point)) {
+            print "$kpoint $code\n";
+        }
     }
 }
