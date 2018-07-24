@@ -1,0 +1,56 @@
+#!/usr/bin/perl -l
+use strict;
+use warnings;
+use Image::Magick;
+use LWP::Simple 'get';
+
+my %tempmap = (
+    "#B40068" => "0:35度↑",
+    "#FF2800" => "1:30度↑",
+    "#FF9900" => "2:25度↑",
+    "#FAF500" => "3:20度↑",
+    "#FFFF96" => "4:15度↑",
+    "#FFFFF0" => "5:10度↑",
+    "#B9EBFF" => "6: 5度↑",
+    "#0096FF" => "7: 0度↑",
+    "#0041FF" => "8:-5度↑",
+    "#002080" => "9:-5度↓",
+);
+my $tempregex = join("|", keys %tempmap);
+my %temp = ();
+#$temp{$_} = 0 for keys %tempmap;
+
+my $i = Image::Magick->new;
+my @n = localtime;
+my $target = sprintf 'http://www.jma.go.jp/jp/amedas/imgs/temp/000/%04d%02d%02d%02d00-00.png', $n[5] + 1900, $n[4] + 1, $n[3], $n[2];
+
+my $img = eval {get($target)};
+exit 1 unless $img;
+
+$i->Read(blob => $img);
+for my $y (0 .. $i->Get('height') - 1) {
+    for my $x (0 .. $i->Get('width') - 1) {
+        my ($r, $g, $b) = split ',', $i->Get("pixel[$x, $y]");
+        my $rgb = sprintf "#%02X%02X%02X", $r / 256, $g / 256, $b / 256;
+        next if $rgb eq '#8CAED6';
+
+        if (    ($x >= 160 && $x <= 523 && $y <= 324)
+             || ($x >= 153 && $x <= 194 && $y >= 322 && $y <= 389)
+             || ($x >= 119 && $x <= 213 && $y >= 379 && $y <= 413)
+             || ($x >= 339 && $x <= 425 && $y >= 457 && $y <= 443)
+             || ($x >=  66 && $x <= 116 && $y >= 407 && $y <= 447) ) {
+            if ($rgb =~ /^($tempregex)$/o) {
+                $temp{$rgb}++;
+            }
+        }
+    }
+}
+my $total = 0;
+map {$total += $_} values %temp;
+my @t = ();
+while (my ($k, $v) = each %temp) {
+    my $p = $v * 100 / $total;
+    push @t, sprintf("%s %4.1f%% %s", $tempmap{$k}, $p, "*" x int($p));
+}
+print $target;
+print for map {my @p = split(':'); $p[1]} sort @t;
