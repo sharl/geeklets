@@ -24,18 +24,13 @@ codes=~/.${PROG}
 
 args=$(/usr/bin/getopt ejHV $*)
 if [ $? != 0 ]; then
-    echo Usage: ${PROG} [-ejHV] [spot code or name, ...]
-    echo
-    echo "-e     show in English"
-    echo "-j     show in Japanese   (default)"
-    echo "-V     show in vertical"
-    echo "-H     show in horizontal (default)"
+    echo Usage: ${PROG} [spot code or name, ...]
     echo
     echo spot code
     echo
-    echo open http://www.jma.go.jp/jp/amedas/ and select city or town name.
+    echo open https://www.jma.go.jp/jp/amedas/ and select city or town name.
     echo
-    echo URI http://www.jma.go.jp/jp/amedas_h/today-XXXXX.html
+    echo URI "https://www.jma.go.jp/bosai/amedas/#area_type=offices&area_code=130000&amdno=XXXXX&format=table1h"
     echo
     echo "XXXXX is spot code. default is 44132. (Tokyo)"
     echo
@@ -46,121 +41,54 @@ if [ $? != 0 ]; then
     exit 2
 fi
 
-set -- $args
-
-lng=jp
-dir=h
-for o in $args; do
-    case "$o" in
-	-e)
-	    lng=en
-	    shift;;
-	-j)
-	    lng=jp
-	    shift;;
-        -H)
-	    dir=h
-            shift;;
-        -V)
-	    dir=v
-            shift;;
-        --)
-            shift; break;;
-    esac
-done
+declare -a WD=(静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北)
 
 function get {
     code=$1
     region=$2
-    u=http://www.jma.go.jp/$lng/amedas_h/today-${code}.html
+    yyyymmdd=$(date +%Y%m%d --date="-11 minute")
+    HH=$(date +%H --date="-11 minute")
+    hh=$(printf "%02d" $(( HH / 3 * 3)))
+    u=https://www.jma.go.jp/bosai/amedas/data/point/${code}/${yyyymmdd}_${hh}.json
 
-    /usr/bin/curl -s $u | /usr/bin/gawk -v lng=$lng -v code=$code -v region=$region '
-    function trim(s) {
-	gsub(/<[^>]+>/, "_", s);
-	gsub(/__/, " ", s);
-	gsub("_", "", s);
-	gsub(/^[ \t]+/, "", s);
-	return s
-    }
-    /class="td_title height2"/{
-	if (lng == "jp") {
-	    split(trim($0), ltmp, "　")
-	    sub(/\(.*\)/, "", ltmp[2])
-	    location = ltmp[2]
-	} else {
-	    sub(/^.*;/, "")
-	    location = trim($0)
-	}
-    }
-    /class="block top bgcolor/{
-	split(trim($0), label, " ")
-    }
-    /class="block middle bgcolor"/{
-	if (lng == "en") {
-	    sub("In 16", "")
-	    sub("&deg;C", "℃")
-	}
-	split(trim($0), unit, " ")
-    }
-    /class="block middle">[0-9\.-]+/{
-	t++;
-	split(trim($0), value, " ")
-    }
-    /td_low/{
-	split(trim($0), tt, "_")
-        gsub("\\(.*\\)", "", tt[1])
-        gsub("&nbsp;", "", tt[1])
-        ac[ai] = tt[1]
-    }
-    /td_arrange/{
-	split(trim($0), tt, " ")
-        gsub("&nbsp;", "", tt[1])
-        gsub("\\(.*\\)", "", tt[1])
-        av[ai] = tt[1]
-    }
-    /td_temp/{
-	split(trim($0), tt, " ")
-        at[ai] = tt[1]
-        ai++;
-    }
-    END {
-	if (location && t) {
-            if (region) {
-	        print location"("region")", t":"
-            } else {
-	        print location, t":"
-            }
-	    cut = (lng == "jp") ? 6 : 4
+    /usr/bin/curl -s $u > $jf
+    now="${yyyymmdd}${HH}0000"
+    if [ "${HH}" = "00" ]; then
+	HH=24
+    fi
+    if [ -z $region ]; then
+	echo "${spot} ${HH}時:"
+    else
+	echo "${spot}(${region}) ${HH}時:"
+    fi
+    cat $jf | /usr/bin/jq '.["'$now'"]' > $js
+    #echo $(cat $js) > /dev/stderr
 
-	    for (i = 1; i <= length(label); i++) {
-		if (label[i] == "風向" || label[i] ~ /Direction/) unit[i]=""
-		if (value[i] ~ /nbsp/) continue
-		print substr(label[i], 0, cut), value[i]unit[i]
-	    }
-            u[1]=unit[1]
-            u[2]=unit[1]
-            u[3]=unit[4]
-	    for (i = 1; i < length(ac); i++) {
-                print ac[i], av[i]u[i], "("at[i]")"
-            }
-	}
-    }
-'
+    for i in "気温 temp 度" "降水量 precipitation1h mm" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa"; do
+	t=${i// */}
+	k=${i% *}; k=${k/* }
+	u=${i//* /}
+	v=$(cat $js | jq -r '.["'$k'"][0] | tostring')
+	if [ "$v" != "null" ]; then
+	    if [ "$k" = windDirection ]; then
+		echo $t ${WD[$v]}$u
+	    else
+		echo $t $v$u
+	    fi
+	fi
+    done
 }
 
 function show {
-    code=$1
-    region=$2
-    if [ $dir = "v" ]; then
-	get ${code} ${region}
-	echo
-    elif [ $dir = "h" ]; then
-	l=$(get ${code} ${region})
-	if [ -z "$l" ]; then
-	    return 1
-	else
-	    echo $l
-	fi
+    spot=$1
+    code=$2
+    region=$3
+
+    l=$(get ${code} ${region})
+    if [ -z "$l" ]; then
+	return 1
+    else
+	echo $l
     fi
 }
 
@@ -168,23 +96,28 @@ deflist=${AMEDAS-44132}	# Tokyo
 list=${*-$deflist}
 
 tf=$(/bin/mktemp)
-trap "/bin/rm -f $tf" 0 1 2 3 15
+jf=$(/bin/mktemp)
+js=$(/bin/mktemp)
+trap "/bin/rm -f $tf $jf $js" 0 1 2 3 15
 
+RET=1
 for code in $list; do
     if [ -f $codes ]; then
 	grep "^$code " $codes > $tf
+	if [ ! -s $tf ]; then
+	    grep " ${code} " $codes > $tf
+	fi
+	if [ ! -s $tf ]; then
+	    grep " ${code}\$" $codes > $tf
+	fi
 	if [ -s $tf ]; then
 	    cat $tf | while read spot cod region; do
-		show ${cod} ${region}
+		show ${spot} ${cod} ${region}
 	    done
-	else
-	    show ${code}
+	    RET=0
 	fi
-    else
-	show ${code}
     fi
-    RET=$?
     if [ $RET -eq 1 ]; then
-	echo "$code が見つかりませんでした。http://www.jma.go.jp/jp/amedas/ から観測地点を指定してください。"
+	echo "$code が見つかりませんでした。https://www.jma.go.jp/jp/amedas/ から観測地点を指定してください。"
     fi
 done
