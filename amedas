@@ -1,4 +1,5 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
 #
 export LC_ALL=C
 PROG=$(basename $0)
@@ -22,7 +23,7 @@ codes=~/.${PROG}
 #	https://gist.github.com/sharl/7fe81af4ebc53791732314392201c8a9
 #
 
-args=$(/usr/bin/getopt ejHV $*)
+args=$(/usr/bin/getopt Z $*)
 if [ $? != 0 ]; then
     echo Usage: ${PROG} [spot code or name, ...]
     echo
@@ -51,24 +52,27 @@ function get {
     hh=$(printf "%02d" $(( HH / 3 * 3)))
     u=https://www.jma.go.jp/bosai/amedas/data/point/${code}/${yyyymmdd}_${hh}.json
 
-    /usr/bin/curl -s $u > $jf
+    /usr/bin/curl -s $u > $jf 2> /dev/null
     now="${yyyymmdd}${HH}0000"
+    cat $jf | /usr/bin/jq '.["'$now'"]' > $js 2> /dev/null
+    if [ $? != 0 ]; then
+	return
+    fi
     if [ "${HH}" = "00" ]; then
 	HH=24
     fi
     if [ -z $region ]; then
-	echo "${spot} ${HH}時:"
+	echo "${spot} $(printf '%d' ${HH})時:"
     else
-	echo "${spot}(${region}) ${HH}時:"
+	echo "${spot}(${region}) $(printf '%d' ${HH})時:"
     fi
-    cat $jf | /usr/bin/jq '.["'$now'"]' > $js
     #echo $(cat $js) > /dev/stderr
 
     for i in "気温 temp 度" "降水量 precipitation1h mm" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa"; do
 	t=${i// */}
 	k=${i% *}; k=${k/* }
 	u=${i//* /}
-	v=$(cat $js | jq -r '.["'$k'"][0] | tostring')
+	v=$(cat $js | /usr/bin/jq -r '.["'$k'"][0] | tostring')
 	if [ "$v" != "null" ]; then
 	    if [ "$k" = windDirection ]; then
 		echo $t ${WD[$v]}$u
