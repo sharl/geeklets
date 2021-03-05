@@ -77,6 +77,11 @@ function get {
 	    if [ "$k" = windDirection ]; then
 		echo $t ${WD[$v]}$u
 	    else
+		if [ "$k" = sun1h ]; then
+		    if [ ${HH} -lt 4 -o ${HH} -gt 20 ]; then
+			continue
+		    fi
+		fi
 		echo $t $v$u
 	    fi
 	fi
