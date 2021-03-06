@@ -48,23 +48,23 @@ function get {
     code=$1
     region=$2
     yyyymmdd=$(date +%Y%m%d --date="-11 minute")
-    HH=$(date +%H --date="-11 minute")
-    hh=$(printf "%02d" $(( HH / 3 * 3)))
+    HH=$(date +%k --date="-11 minute")
+    hh=$(printf "%02d" $((HH / 3 * 3)))
     u=https://www.jma.go.jp/bosai/amedas/data/point/${code}/${yyyymmdd}_${hh}.json
 
     /usr/bin/curl -s $u > $jf 2> /dev/null
-    now="${yyyymmdd}${HH}0000"
+    now="${yyyymmdd}$(printf '%02d' ${HH})0000"
     cat $jf | /usr/bin/jq '.["'$now'"]' > $js 2> /dev/null
     if [ $? != 0 ]; then
 	return
     fi
-    if [ "${HH}" = "00" ]; then
+    if [ "${HH}" = "0" ]; then
 	HH=24
     fi
     if [ -z $region ]; then
-	echo "${spot} $(printf '%d' ${HH})時:"
+	echo "${spot} ${HH}時:"
     else
-	echo "${spot}(${region}) $(printf '%d' ${HH})時:"
+	echo "${spot}(${region}) ${HH}時:"
     fi
     #echo $(cat $js) > /dev/stderr
 
