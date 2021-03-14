@@ -68,7 +68,8 @@ function get {
     fi
     #echo $(cat $js) > /dev/stderr
 
-    for i in "気温 temp 度" "降水量 precipitation1h mm" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "積雪量 snow1h cm" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa"; do
+    snow=$(cat $js | /usr/bin/jq -r '.["snow"][0]')
+    for i in "気温 temp 度" "降水量 precipitation1h mm" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" " 降雪量 snow1h cm" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa"; do
 	t=${i// */}
 	k=${i% *}; k=${k/* }
 	u=${i//* /}
@@ -81,6 +82,9 @@ function get {
 		    if [ ${HH} -lt 4 -o ${HH} -gt 20 ]; then
 			continue
 		    fi
+		fi
+		if [ ${snow} = "null" -a "$k" = snow1h ]; then
+		    continue
 		fi
 		echo $t $v$u
 	    fi
