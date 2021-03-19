@@ -58,7 +58,7 @@ function get {
     if [ $? != 0 ]; then
 	return
     fi
-    if [ "${HH}" = "0" ]; then
+    if [ "${HH}" = " 0" ]; then
 	HH=24
     fi
     if [ -z $region ]; then
