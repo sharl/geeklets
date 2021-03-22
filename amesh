@@ -1,0 +1,59 @@
+#!/bin/bash
+# -*- coding: utf-8 -*-
+# 東京アメッシュの画像を取得して合成
+now=$(date +%s)
+
+BASE_URL=https://tokyo-ame.jwa.or.jp
+MAP=/map/map000.jpg
+MSK=/map/msk000.png
+# https://tokyo-ame.jwa.or.jp/mesh/000/201906071525.gif
+rfm=$(date --date=@$((now / (5 * 60) * 5 * 60 - 5 * 60)) +%Y%m%d%H%M)
+RFM=/mesh/000/${rfm}.gif
+
+mapfile=/var/tmp/map.jpg
+mskfile=/var/tmp/msk.png
+rfmfile=/var/tmp/rfm.gif
+
+layer00=$(/bin/mktemp).png
+layer01=$(/bin/mktemp).png
+
+trap "/bin/rm -f $layer00 $layer01" 0 1 2 3 15
+
+args=$(/usr/bin/getopt -l stdout,sixel -o cs -- $*)
+if [ $? != 0 ]; then
+    exit
+fi
+stdout=
+sixel=1
+set -- $args
+for o in ${args}; do
+    case "$o" in
+	-c|--stdout)
+	    stdout=1
+	    sixel=
+	    shift
+	    ;;
+	-s|--sixel)
+	    stdout=
+	    sixel=1
+	    shift
+	    ;;
+	--)
+	    shift
+	    ;;
+    esac
+done
+
+/usr/bin/wget -q --mirror ${BASE_URL}${MAP} -O ${mapfile}
+/usr/bin/wget -q --mirror ${BASE_URL}${MSK} -O ${mskfile}
+/usr/bin/wget -q --mirror ${BASE_URL}${RFM} -O ${rfmfile}
+
+/usr/bin/composite -compose over ${rfmfile} ${mapfile} ${layer00}
+/usr/bin/composite -compose over ${mskfile} ${layer00} ${layer01}
+
+if [ ! -z "${sixel}" ]; then
+    /usr/bin/img2sixel ${layer01}
+fi
+if [ ! -z "${stdout}" ]; then
+    cat ${layer01}
+fi
