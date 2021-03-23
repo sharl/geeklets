@@ -79,11 +79,11 @@ function get {
 		echo $t ${WD[$v]}$u
 	    else
 		if [ "$k" = sun1h ]; then
-		    if [ ${HH} -lt 4 -o ${HH} -gt 20 ]; then
+		    if [ "${HH}" -lt 4 -o "${HH}" -gt 20 ]; then
 			continue
 		    fi
 		fi
-		if [ ${snow} = "null" -a "$k" = snow1h ]; then
+		if [ "${snow}" = "null" -a "$k" = snow1h ]; then
 		    continue
 		fi
 		echo $t $v$u
