@@ -53,8 +53,14 @@ function get {
     u=https://www.jma.go.jp/bosai/amedas/data/point/${code}/${yyyymmdd}_${hh}.json
 
     /usr/bin/curl -s $u > $jf 2> /dev/null
-    now="${yyyymmdd}$(printf '%02d' ${HH})0000"
-    cat $jf | /usr/bin/jq '.["'$now'"]' > $js 2> /dev/null
+    now=$(cat $jf | /usr/bin/jq -r 'keys[-1]' 2> /dev/null)
+    base="${yyyymmdd}$(printf '%02d' ${HH})0000"
+    MM=$(echo $now | cut -c 11-12)
+    cat $jf | /usr/bin/jq '.["'$base'"]' > $js 2> /dev/null
+    if [ $? != 0 ]; then
+	return
+    fi
+    cat $jf | /usr/bin/jq '.["'$now'"]' > $jm 2> /dev/null
     if [ $? != 0 ]; then
 	return
     fi
@@ -62,10 +68,12 @@ function get {
 	HH=24
     fi
     if [ -z $region ]; then
-	echo "${spot} ${HH}時:"
+	echo "${spot} ${HH}:${MM}"
     else
-	echo "${spot}(${region}) ${HH}時:"
+	echo "${spot}(${region}) ${HH}:${MM}"
     fi
+    /usr/bin/jq -s '. | add' $js $jm > $jt 2> /dev/null
+    mv -f $jt $js
     #echo $(cat $js) > /dev/stderr
 
     snow=$(cat $js | /usr/bin/jq -r '.["snow"][0]')
@@ -111,7 +119,9 @@ list=${*:-$deflist}
 tf=$(/bin/mktemp)
 jf=$(/bin/mktemp)
 js=$(/bin/mktemp)
-trap "/bin/rm -f $tf $jf $js" 0 1 2 3 15
+jm=$(/bin/mktemp)
+jt=$(/bin/mktemp)
+trap "/bin/rm -f $tf $jf $js $jm $jt" 0 1 2 3 15
 
 RET=1
 for code in $list; do
