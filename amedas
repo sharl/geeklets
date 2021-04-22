@@ -77,7 +77,7 @@ function get {
     #echo $(cat $js) > /dev/stderr
 
     snow=$(cat $js | /usr/bin/jq -r '.["snow"][0]')
-    for i in "気温 temp 度" "降水量 precipitation1h mm/h" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "降雪量 snow1h cm/h" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa"; do
+    for i in "気温 temp 度" "降水量 precipitation1h mm/h" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "降雪量 snow1h cm/h" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa" "最低気温 minTemp 度" "最高気温 maxTemp 度"; do
 	t=${i// */}
 	k=${i% *}; k=${k/* }
 	u=${i//* /}
@@ -95,6 +95,11 @@ function get {
 		    continue
 		fi
 		echo $t $v$u
+		if [[ $k =~ Temp ]]; then
+                   hh=$(cat $js | /usr/bin/jq -r '.["'${k}Time'"]["hour"]')
+                   mm=$(cat $js | /usr/bin/jq -r '.["'${k}Time'"]["minute"]')
+                   echo "($(printf "%02d:%02d" $(((hh + 9) % 24)) $mm))"
+		fi
 	    fi
 	fi
     done
