@@ -119,7 +119,9 @@ function show {
 }
 
 deflist=${AMEDAS-44132}	# Tokyo
-list=${*:-$deflist}
+# bash 5
+list=$*
+list=${list:-$deflist}
 
 tf=$(/bin/mktemp)
 jf=$(/bin/mktemp)
