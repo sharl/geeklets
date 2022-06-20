@@ -1,0 +1,133 @@
+#!/bin/bash
+# -*- coding: utf-8 -*-
+#
+export LC_ALL=C
+PROG=$(basename $0)
+#
+codes=~/.${PROG}
+codes=~/.amedas
+#
+# codes format:
+#
+#	spotname code [region]
+#
+# 札幌 14163
+# 東京 44132
+# 清水 50261 静岡
+# 清水 65121 和歌山
+# 清水 74516 高知
+#
+# from
+#	http://www.jma.go.jp/jma/kishou/know/amedas/kaisetsu.html
+#	http://www.jma.go.jp/jma/kishou/know/amedas/ame_master.zip
+# or
+#	https://gist.github.com/sharl/7fe81af4ebc53791732314392201c8a9
+#
+
+args=$(/usr/bin/getopt Z $*)
+if [ $? != 0 ]; then
+    echo Usage: ${PROG} [spot code or name, ...]
+    echo
+    echo spot code
+    echo
+    echo open https://www.jma.go.jp/jp/amedas/ and select city or town name.
+    echo
+    echo URI "https://www.jma.go.jp/bosai/amedas/#area_type=offices&area_code=130000&amdno=XXXXX&format=table1h"
+    echo
+    echo "XXXXX is spot code. default is 44132. (Tokyo)"
+    echo
+    echo set AMEDAS default spots.
+    echo
+    echo -e 'ex)\texport AMEDAS="14163 44132 46106"'
+    echo
+    exit 2
+fi
+
+declare -a WD=(静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北)
+
+function get {
+    code=$1
+    region=$2
+
+    if [ "${HH}" = "00" ]; then
+	HH=24
+    fi
+    if [ -z $region ]; then
+	echo "${spot} ${HH}:${MM}"
+    else
+	echo "${spot}(${region}) ${HH}:${MM}"
+    fi
+    snow=$(cat $jf | /usr/bin/jq -r '.["'$code'"]["snow"][0]')
+    for i in "気温 temp 度" "降水量 precipitation1h mm/h" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "降雪量 snow1h cm/h" "湿度 humidity %" "気圧 pressure hPa"; do
+	t=${i// */}
+	k=${i% *}; k=${k/* }
+	u=${i//* /}
+	v=$(cat $jf | /usr/bin/jq -r '.["'$code'"]["'$k'"][0] | tostring')
+	if [ "$v" != "null" ]; then
+	    if [ "$k" = windDirection ]; then
+		echo $t ${WD[$v]}$u
+	    else
+		if [ "$k" = sun1h ]; then
+		    if [ "${HH}" -lt 4 -o "${HH}" -gt 20 ]; then
+			continue
+		    fi
+		fi
+		if [ "${snow}" = "null" -a "$k" = snow1h ]; then
+		    continue
+		fi
+		echo $t $v$u
+	    fi
+	fi
+    done
+}
+
+function show {
+    spot=$1
+    code=$2
+    region=$3
+
+    l=$(get ${code} ${region})
+    if [ -z "$l" ]; then
+	return 1
+    else
+	echo $l
+    fi
+}
+
+deflist=${AMEDAS-44132}	# Tokyo
+# bash 5
+list=$*
+list=${list:-$deflist}
+
+tf=$(/bin/mktemp)
+jf=$(/bin/mktemp)
+trap "/bin/rm -f $tf $jf" 0 1 2 3 15
+
+latest=$(curl -s https://www.jma.go.jp/bosai/amedas/data/latest_time.txt)
+yyyymmddhhmm00=$(echo $latest | cut -c1-4,6,7,9,10,12,13,15,16)00
+HH=$(echo $latest | cut -c12,13)
+MM=$(echo $latest | cut -c15,16)
+u=https://www.jma.go.jp/bosai/amedas/data/map/${yyyymmddhhmm00}.json
+/usr/bin/curl -s $u > $jf 2> /dev/null
+
+RET=1
+for code in $list; do
+    if [ -f $codes ]; then
+	grep "^$code " $codes > $tf
+	if [ ! -s $tf ]; then
+	    grep " ${code} " $codes > $tf
+	fi
+	if [ ! -s $tf ]; then
+	    grep " ${code}\$" $codes > $tf
+	fi
+	if [ -s $tf ]; then
+	    cat $tf | while read spot cod region; do
+		show ${spot} ${cod} ${region}
+	    done
+	    RET=0
+	fi
+    fi
+    if [ $RET -eq 1 ]; then
+	echo "$code が見つかりませんでした。https://www.jma.go.jp/jp/amedas/ から観測地点を指定してください。"
+    fi
+done
