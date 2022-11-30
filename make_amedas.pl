@@ -21,7 +21,7 @@ if ($res->code == 200) {
     $z->read($zip) == AZ_OK || die $!;
 
     foreach my $member ($z->members) {
-        $z->extractMemberWithoutPaths($member->fileName());
+        $z->extractMemberWithoutPaths($member->fileName(), $csv);
     }
 }
 
