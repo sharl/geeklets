@@ -21,4 +21,6 @@ if [ ! -z "${lat}" -a ! -z "${lng}" ]; then
     url="https://weather.yahoo.co.jp/weather/zoomradar/?lat=${lat}&lon=${lng}&z=${zom}"
     ogi=$(curl -s ${url} | sed -e 's,^.*<meta content="\(.*\)" property="og:image"/>.*$,\1,p;d' | sed -e 's/\&amp;/\&/g')
     curl -s "${ogi}" | img2sixel
+else
+    rm -f $tmpfile
 fi
