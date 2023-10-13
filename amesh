@@ -25,6 +25,11 @@ if [ $? != 0 ]; then
 fi
 stdout=
 sixel=1
+# detect sixel attr
+for e in $(echo -en '\e[c' | read -d c da1; echo -E "${da1#*\?}" | tr \; \ ); do
+    [ $e -eq 4 ] && sixel=1 || sixel=0
+done
+
 set -- $args
 for o in ${args}; do
     case "$o" in
