@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import os
+import json
+
+import requests
+from bs4 import BeautifulSoup
+
+
+class Tenkijp:
+    def __init__(self):
+        self.conf = os.environ.get('HOME', '.') + '/.tenkijp'
+        self.config = {}
+
+        if os.path.exists(self.conf):
+            with open(self.conf) as fd:
+                self.config = json.load(fd)
+        else:
+            self._make_conf()
+
+    def _make_conf(self):
+        with open(self.conf, 'w') as fd:
+            fd.write(json.dumps(self.config, indent=2, ensure_ascii=False))
+
+    def add(self, pref, url):
+        self.config[pref] = url
+        self._make_conf()
+
+    def lookup(self, pref):
+        url = self.config.get(pref)
+        if not url:
+            return []
+        else:
+            try:
+                r = requests.get(url, timeout=10)
+                if r and r.status_code == 200:
+                    soup = BeautifulSoup(r.content, 'html.parser')
+                    # 抽出
+                    _lines = []
+                    dds = soup.find_all('dd', class_='forecast10days-actab')
+                    for dd in dds:
+                        divs = dd.find_all('div')
+
+                        days = divs[0].text
+                        fore = divs[1].text
+                        imgs = divs[1].find('img')
+                        icon = os.path.basename(imgs.get('src')).replace('.png', '')
+                        tmps = divs[2].find_all('span')
+                        th = tmps[0].text
+                        tl = tmps[1].text
+                        prob = divs[3].text
+                        _lines.append([days, fore, icon, th, tl, prob])
+
+                    # 整形
+                    lines = []
+                    mx = 0
+                    spc = ''
+                    for line in _lines:
+                        mx = len(line[1]) if len(line[1]) > mx else mx
+                    for line in _lines:
+                        if len(line[1]) < mx:
+                            line[1] = line[1] + '\u3000' * (mx - len(line[1]))
+                    for line in _lines:
+                        _l = f"{line[0]} {line[1]} {line[3]:>4} {line[4]:>4} {line[5]:>4}"
+                        lines.append(_l)
+                    return lines[:7]
+            except Exception as e:
+                print(e)
+
+        return []
+
+
+if __name__ == '__main__':
+    import sys
+    tenki = Tenkijp()
+
+    if len(sys.argv) == 3:
+        tenki.add(sys.argv[1], sys.argv[2])
+    if len(sys.argv) >= 2:
+        lines = tenki.lookup(sys.argv[1])
+        if lines:
+            for line in lines:
+                print(line)
