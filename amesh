@@ -46,13 +46,15 @@ for o in ${args}; do
 done
 
 # detect sixel attr
-stty -echo; echo -en '\e[c'; read -d c da1 <&1; stty echo; es=$(echo -E "${da1#*\?}" | tr ";" " ")
-for e in $es; do
-    if [ $e -eq 4 ]; then
-	sixel=1
-	break
-    fi
-done
+if [ -z "${stdout}" ]; then
+    stty -echo; echo -en '\e[c'; read -d c da1 <&1; stty echo; es=$(echo -E "${da1#*\?}" | tr ";" " ")
+    for e in $es; do
+	if [ $e -eq 4 ]; then
+	    sixel=1
+	    break
+	fi
+    done
+fi
 
 /usr/bin/wget -q --mirror ${BASE_URL}${MAP} -O ${mapfile}
 /usr/bin/wget -q --mirror ${BASE_URL}${MSK} -O ${mskfile}
