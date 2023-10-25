@@ -24,11 +24,7 @@ if [ $? != 0 ]; then
     exit
 fi
 stdout=
-sixel=1
-# detect sixel attr
-for e in $(echo -en '\e[c' | read -d c da1; echo -E "${da1#*\?}" | tr \; \ ); do
-    [ $e -eq 4 ] && sixel=1 || sixel=0
-done
+sixel=0
 
 set -- $args
 for o in ${args}; do
@@ -47,6 +43,15 @@ for o in ${args}; do
 	    shift
 	    ;;
     esac
+done
+
+# detect sixel attr
+stty -echo; echo -en '\e[c'; read -d c da1 <&1; stty echo; es=$(echo -E "${da1#*\?}" | tr ";" " ")
+for e in $es; do
+    if [ $e -eq 4 ]; then
+	sixel=1
+	break
+    fi
 done
 
 /usr/bin/wget -q --mirror ${BASE_URL}${MAP} -O ${mapfile}
