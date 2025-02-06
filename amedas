@@ -47,8 +47,9 @@ declare -a WD=(静穏 北北東 北東 東北東 東 東南東 南東 南南東 
 function get {
     code=$1
     region=$2
-    yyyymmdd=$(date +%Y%m%d --date="-11 minute")
-    HH=$(date +%k --date="-11 minute")
+    lastmod=$(/usr/bin/curl -s https://www.jma.go.jp/bosai/amedas/data/latest_time.txt)
+    yyyymmdd=$(date +%Y%m%d --date="${lastmod}")
+    HH=$(date +%k --date="${lastmod}")
     hh=$(printf "%02d" $((HH / 3 * 3)))
     u=https://www.jma.go.jp/bosai/amedas/data/point/${code}/${yyyymmdd}_${hh}.json
 
@@ -77,7 +78,7 @@ function get {
     #echo $(cat $js) > /dev/stderr
 
     snow=$(cat $js | /usr/bin/jq -r '.["snow"][0]')
-    for i in "気温 temp 度" "降水量 precipitation1h mm/h" "風向 windDirection " "風速 wind m/s" "日照時間 sun1h h" "積雪 snow cm" "降雪量 snow1h cm/h" "湿度 humidity %" "気圧 pressure hPa" "海面気圧 normalPressure hPa" "最低気温 minTemp 度" "最高気温 maxTemp 度"; do
+    for i in "気温 temp 度" "降水量 precipitation1h mm/h" "風向 windDirection " "風速 wind m/s" "積雪 snow cm" "降雪量 snow1h cm/h" "湿度 humidity %" "気圧 pressure hPa" "最低気温 minTemp 度" "最高気温 maxTemp 度"; do
 	t=${i// */}
 	k=${i% *}; k=${k/* }
 	u=${i//* /}
