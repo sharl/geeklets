@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
 import json
+import os
+import sys
 
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +17,7 @@ class Tenkijp:
             with open(self.conf) as fd:
                 self.config = json.load(fd)
         else:
+            self.scan()
             self._make_conf()
 
     def _make_conf(self):
@@ -69,15 +71,46 @@ class Tenkijp:
 
         return []
 
+    def scan(self):
+        if not sys.stdout.isatty():
+            return
+
+        print('scanning...', end='')
+        print('done')
+
+        base_url = 'https://tenki.jp'
+        with requests.get(base_url) as r:
+            soup = BeautifulSoup(r.content, 'html.parser')
+            entries = soup.find(class_='common-list-entries')
+            prefs = entries.find_all(class_='pref-link')
+            for pref in prefs:
+                link = base_url + pref.get('href')
+                with requests.get(link) as pr:
+                    s = BeautifulSoup(pr.content, 'html.parser')
+                    point_entries = s.find(id='forecast-others-point-entries')
+                    points = point_entries.find_all('li')
+                    for point in points:
+                        p = point.a.text
+                        u = base_url + point.a.get('href') + '10days.html'
+
+                        pr = pref.text
+                        if pr.startswith('道'):
+                            pr = '北海道'
+                        self.config[pr + p] = u
+
+            self._make_conf()
+
 
 if __name__ == '__main__':
-    import sys
     tenki = Tenkijp()
 
     if len(sys.argv) == 3:
         tenki.add(sys.argv[1], sys.argv[2])
     if len(sys.argv) >= 2:
-        lines = tenki.lookup(sys.argv[1])
-        if lines:
-            for line in lines:
-                print(line)
+        if sys.argv[1] == 'scan':
+            tenki.scan()
+        else:
+            lines = tenki.lookup(sys.argv[1])
+            if lines:
+                for line in lines:
+                    print(line)
