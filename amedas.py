@@ -30,6 +30,27 @@ with open(f"{os.environ.get('HOME', '.')}/.{basename}") as fd:
 
 # wind directions
 WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北'.split()
+WEATHER_INFO = {
+    0: "晴",
+    1: "曇",
+    2: "煙霧",
+    3: "霧",
+    4: "降水またはしゅう雨性の降水",
+    5: "霧雨",
+    6: "着氷性の霧雨",
+    7: "雨",
+    8: "着氷性の雨",
+    9: "みぞれ",
+    10: "雪",
+    11: "凍雨",
+    12: "霧雪",
+    13: "しゅう雨または止み間のある雨",
+    14: "しゅう雪または止み間のある雪",
+    15: "ひょう",
+    16: "雷",
+    30: "天気不明",
+    31: "欠測",
+}
 
 # AQC (Automatic Quality Control) 識別符号
 # https://www.data.jma.go.jp/stats/data/mdrr/man/remark.html
@@ -115,6 +136,7 @@ async def fetch_data(session, loc, code, url, lines):
                 m = last_key[10:12]
                 _lines = [f'{loc} {h}:{m}']
                 for x in [
+                        '天気 weather -',
                         '気温 temp 度',
                         '降水量 precipitation1h mm/h',
                         '風向 windDirection -',
@@ -138,6 +160,8 @@ async def fetch_data(session, loc, code, url, lines):
                         else:
                             if k == 'windDirection':
                                 _lines.append(f'{t} {WD[v]}')
+                            elif k == 'weather':
+                                _lines.append(f'{t} {WEATHER_INFO[v]}')
                             elif 'Temp' in k:
                                 h, m = _vars[f'{k}Time'].values()
                                 if (h or m) is not None:
