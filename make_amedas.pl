@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+# -*- coding: utf-8 -*-
 use utf8;
 use strict;
 use warnings;
@@ -9,6 +9,7 @@ use Encode 'decode';
 
 my %prefs;      # 都道府県地方名
 my %maps;       # 観測所コードと観測所名
+my %airports;   # 観測所コードと空港名
 my %dups;       # 観測所名重複用
 
 my $zip = 'ame_master.zip';
@@ -25,17 +26,23 @@ if ($res->code == 200) {
     }
 }
 
+my $AIRPORT = '空港';
+utf8::encode($AIRPORT);
+
 open(my $fd, '<', $csv) || die $!;
 <$fd>;
 while (my $line = <$fd>) {
     $line = Encode::decode('sjis', $line);
     utf8::encode($line);
 
-    my ($pref, $code, undef, $point) = split(',', $line);
+    my ($pref, $code, undef, $point, undef, $airport) = split(',', $line);
     next if defined $maps{$code};
 
     $maps{$code} = $point;
     $prefs{$code} = $pref;
+    if ($airport =~ /$AIRPORT$/ and $point ne $airport) {
+	$airports{$code} = $airport;
+    }
     $dups{$point}++;
 }
 close($fd);
@@ -89,6 +96,9 @@ foreach my $code (sort keys %maps) {
     } else {
         foreach my $kpoint (trans($point)) {
             print "$kpoint $code\n";
+	    if (defined $airports{$code}) {
+		print "$airports{$code} $code\n";
+	    }
         }
     }
 }
