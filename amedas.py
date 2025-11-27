@@ -96,23 +96,21 @@ if len(sys.argv) > 1:
     if _args:
         AMEDAS = _args
 
-# translate loc to code
-locs = []
+# check errors
 errs = []
 for arg in AMEDAS:
-    if arg.isdigit():
-        locs.append(arg)
-    else:
-        count = 0
-        for loc, code, pref in codes:
-            if loc == arg:
-                locs.append(code)
+    count = 0
+    for loc, code, pref in codes:
+        if arg.isdigit():
+            if code == arg:
                 count += 1
-        if not count:
-            errs.append(arg)
+        else:
+            if loc == arg:
+                count += 1
+    if not count:
+        errs.append(arg)
 
 # print(AMEDAS)
-# print(locs)
 # print(errs)
 
 
@@ -170,7 +168,7 @@ async def fetch_data(session, loc, code, url, lines):
                                     _lines.append(f"{t} {v}{u}")
                             else:
                                 _lines.append(f'{t} {v}{u}')
-                lines[code] = ' '.join(_lines)
+                lines[loc] = ' '.join(_lines)
             else:
                 print(f"Error: {response.status} for URL: {url}")
     except aiohttp.ClientError as e:
@@ -188,19 +186,26 @@ async def prequests(loc, code, lines):
 
         await asyncio.gather(*tasks)
 
-
-# lines :  {key: code, value: amedas}
-lines = {}
-for code in locs:
+# points: { key: name, value: code}
+points = {}
+for name in AMEDAS:
     loc = None
+    code = None
     for _loc, _code, _pref in codes:
-        if code == _code:
+        if _loc == name or name == _code:
             if _pref and _pref != '東京':
                 loc = f'{_loc}({_pref})'
             else:
                 loc = _loc
-    if loc:
-        asyncio.run(prequests(loc, code, lines))
+            code = _code
+        if loc and code:
+            points[loc] = code
+
+# lines :  {key: code, value: amedas}
+lines = {}
+for loc in points:
+    code = points[loc]
+    asyncio.run(prequests(loc, code, lines))
 
 for code in lines:
     print(lines[code])
