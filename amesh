@@ -14,10 +14,10 @@ mapfile=/var/tmp/map.jpg
 mskfile=/var/tmp/msk.png
 rfmfile=/var/tmp/rfm.gif
 
-layer00=$(/bin/mktemp).png
-layer01=$(/bin/mktemp).png
+layer00=$(/bin/mktemp)
+layer01=$(/bin/mktemp)
 
-trap "/bin/rm -f $layer00 $layer01" 0 1 2 3 15
+trap "/bin/rm -f ${layer00} ${layer01}" 0 1 2 3 15
 
 args=$(/usr/bin/getopt -l stdout,sixel -o cs -- $*)
 if [ $? != 0 ]; then
