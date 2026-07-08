@@ -97,9 +97,9 @@ foreach my $code (sort keys %maps) {
     } else {
         foreach my $kpoint (trans($point)) {
             print "$kpoint $code\n";
-	    if (defined $airports{$code}) {
-		print "$airports{$code} $code\n";
-	    }
         }
+    }
+    if (defined $airports{$code}) {
+	print "$airports{$code} $code\n";
     }
 }
