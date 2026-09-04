@@ -63,6 +63,8 @@ WEATHER_INFO = {
 # 5 点検又は計画休止のため欠測
 # 6 障害のため欠測
 # 7 この要素の観測はしていない
+AMEDAS_PREDICT = os.environ.get('AMEDAS_PREDICT')
+AQC_PREDICT = -1
 AQC_INFO = {
     0: '',
     1: ')',
@@ -72,7 +74,9 @@ AQC_INFO = {
     5: '休止中',
     6: '✕',
     None: '　',
+    AQC_PREDICT: '?',
 }
+AQC_OK = [0, 1, AQC_PREDICT]
 
 # get latest time
 with requests.get('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt') as r:
@@ -129,6 +133,26 @@ async def fetch_data(session, loc, code, url, lines):
                 for k in data[last_key]:
                     _vars[k] = data[last_key][k]
                     h = last_key[8:10]
+                # ------------------------------------------------------------
+                # 気温・降水・降雪から天気補完を試みる
+                if AMEDAS_PREDICT and 'weather' not in _vars:
+                    snow = False
+                    tv, aqc = _vars.get('temp')
+                    if aqc in AQC_OK and tv < 0:
+                        snow = True
+                    sv, aqc = _vars.get('snow1h')
+                    if aqc in AQC_OK and sv > 0:
+                        snow = True
+                    pv, aqc = _vars.get('precipitation1h')
+                    if aqc in AQC_OK and pv > 0:
+                        w = 7           # 7: 雨
+                        if tv < 0 or snow:
+                            w = 10      # 10: 雪
+                        elif tv < 5:
+                            w = 9       # 9: みぞれ
+                        _vars['weather'] = [w, AQC_PREDICT]
+                # print(_vars)
+                # ------------------------------------------------------------
                 if h == '00':
                     h = '24'
                 m = last_key[10:12]
@@ -152,14 +176,13 @@ async def fetch_data(session, loc, code, url, lines):
                         if isinstance(v, float):
                             if v == int(v):
                                 v = int(v)
-                        # 0: 正常 1: 准正常
-                        if aqc != 0 and aqc != 1:
+                        if aqc not in AQC_OK:
                             continue
                         else:
                             if k == 'windDirection':
                                 _lines.append(f'{t} {WD[v]}')
                             elif k == 'weather':
-                                _lines.append(f'{t} {WEATHER_INFO[v]}')
+                                _lines.append(f'{t} {WEATHER_INFO[v]}{AQC_INFO[aqc]}')
                             elif 'Temp' in k:
                                 h, m = _vars[f'{k}Time'].values()
                                 if (h or m) is not None:
