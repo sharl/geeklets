@@ -137,13 +137,13 @@ async def fetch_data(session, loc, code, url, lines):
                 # 気温・降水・降雪から天気補完を試みる
                 if AMEDAS_PREDICT and 'weather' not in _vars:
                     snow = False
-                    tv, aqc = _vars.get('temp')
+                    tv, aqc = _vars.get('temp', [None, None])
                     if aqc in AQC_OK and tv < 0:
                         snow = True
-                    sv, aqc = _vars.get('snow1h')
+                    sv, aqc = _vars.get('snow1h', [None, None])
                     if aqc in AQC_OK and sv > 0:
                         snow = True
-                    pv, aqc = _vars.get('precipitation1h')
+                    pv, aqc = _vars.get('precipitation1h', [None, None])
                     if aqc in AQC_OK and pv > 0:
                         w = 7           # 7: 雨
                         if tv < 0 or snow:
