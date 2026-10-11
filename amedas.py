@@ -121,7 +121,7 @@ for arg in AMEDAS:
 async def fetch_data(session, loc, code, url, lines):
     global yyyymmdd, HH
     try:
-        async with session.get(url) as response:
+        async with session.get(url, timeout=1) as response:
             if response.status == 200:
                 data = await response.json()
                 base_key = f'{yyyymmdd}{HH}0000'        # 積雪は1時間毎
