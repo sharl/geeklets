@@ -219,6 +219,8 @@ for name in AMEDAS:
         if _loc == name or name == _code:
             if _pref and _pref != '東京':
                 loc = f'{_loc}({_pref})'
+            elif '菊川牧之原' in [_loc, name] or _code == '50476':
+                loc = '菊川'
             else:
                 loc = _loc
             code = _code
