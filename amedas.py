@@ -27,6 +27,7 @@ with open(f"{os.environ.get('HOME', '.')}/.{basename}") as fd:
     for line in fd.read().strip().split('\n'):
         t = f'{line} '.split(' ')
         codes.append([t[0], t[1], t[2]])
+    codes.append(('菊川', '50476', ''))
 
 # wind directions
 WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北'.split()
